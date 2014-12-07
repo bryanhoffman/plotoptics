@@ -1,0 +1,76 @@
+#! /bin/bash
+
+# Get system name
+NAME=$(NAME= cat vasprun.xml | grep SYSTEM | tail -1 | sed -e 's,.*>\([^<]*\)</.*,\1,g')
+mkdir $NAME
+cp vasprun.xml $NAME/vasprun.xml
+cd $NAME  
+
+#exctract dielectric functions from vasprun.xml
+#this portion of code taken from http://cms.mpi.univie.ac.at/wiki/index.php/Dielectric_properties_of_SiC
+
+awk 'BEGIN{i=1} /imag/,\
+                /\/imag/ \
+                 {a[i]=$2 ; b[i]=$3 ; i=i+1} \
+     END{for (j=12;j<i-3;j++) print a[j],b[j]}' vasprun.xml > imag.dat
+
+awk 'BEGIN{i=1} /real/,\
+                /\/real/ \
+                 {a[i]=$2 ; b[i]=$3 ; i=i+1} \
+     END{for (j=12;j<i-3;j++) print a[j],b[j]}' vasprun.xml > real.dat
+
+cat >plotfile<<!
+# set term postscript enhanced eps colour lw 2 "Helvetica" 20
+# set output "optics.eps"
+plot [0:25] "imag.dat" using (\$1):(\$2) w lp, "real.dat" using (\$1):(\$2) w lp
+!
+
+usage="$(basename "$0") [-h] [-a] [-t] [-l] [-e] [-r] [-x] -- program to calculate optical properties of solids
+
+where:
+    -h  show this help text
+    -a	make all plots
+    -t	tauc plot
+    -l	absorption plotted versus lambda
+    -e	absorption plotted versus energy[eV]
+    -r  reflection versus energy and lambda
+    -x  loss function v. energy and lambda
+
+notes:
+    all plots are saved to .png format
+    all data are saved to .dat format"
+
+while getopts hatlerx option; do
+  case "$option" in
+    h) echo "$usage"
+       exit
+       ;;
+    a) Rscript ../plot.R
+       Rscript ../plot_lambda.R
+       Rscript ../plot_tauc.R
+       Rscript ../plot_reflection.R
+       Rscript ../plot_loss.R
+       exit 1
+       ;;
+    t) Rscript ../plot_tauc.R
+       exit 1
+       ;;
+    l) Rscript ../plot_lambda.R
+       exit 1
+       ;;
+    e) Rscript ../plot.R 
+       exit 1
+       ;;
+    r) Rscript ../plot_reflection.R
+       exit 1
+       ;;
+    x) Rscript ../plot_loss.R
+       exit 1
+       ;;
+   \?) printf "illegal option: -%s\n" "$OPTARG" >&2
+       echo "$usage" >&2
+       exit 1
+       ;;
+  esac
+done
+shift $((OPTIND - 1))
