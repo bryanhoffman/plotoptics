@@ -5,7 +5,7 @@ h = 4.135668e-15
 c = 2.99792458e8
 e1 = real[[2]]
 e2 = imag[[2]]
-k <- sqrt((sqrt(e1^2+e2^2)-e1)/2)
+k <- sqrt((sqrt(e1^2+e2^2)-e1))
 lambda <- ((h*c)/energy)*10^2
 omega <- energy/(h/(2*pi))
 absor <- 4*pi*k/lambda 
